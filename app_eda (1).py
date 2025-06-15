@@ -484,6 +484,64 @@ class EDA:
                     buffer = io.StringIO()
                     pop_df.info(buf=buffer)
                     st.text(buffer.getvalue())
+        # -------------------------
+        # 10. 인구 연도별 추이 시각화
+        # -------------------------
+        with st.expander("📊 Population Trend Visualization"):
+            pop_file = st.file_uploader("Upload population_trends.csv", type="csv", key="population_trend_viz")
+            if pop_file:
+                pop_df = pd.read_csv(pop_file)
+
+                tabs = st.tabs(["Trend by Year"])
+
+                with tabs[0]:
+                    st.subheader("📈 Yearly Population Trend with 2035 Projection")
+
+                    # '전국' 데이터 필터링
+                    national_df = pop_df[pop_df['행정구역'] == '전국'].copy()
+
+                    # 숫자형 변환
+                    for col in ['인구', '출생아수(명)', '사망자수(명)']:
+                        national_df[col] = pd.to_numeric(national_df[col], errors='coerce')
+                    national_df = national_df.dropna(subset=['연도', '인구'])
+
+                    # 연도 오름차순 정렬
+                    national_df = national_df.sort_values('연도')
+                    years = national_df['연도'].astype(int).tolist()
+                    population = national_df['인구'].astype(int).tolist()
+
+                    # 최근 3년 평균 출생/사망자수 계산
+                    recent = national_df.tail(3)
+                    avg_birth = recent['출생아수(명)'].mean()
+                    avg_death = recent['사망자수(명)'].mean()
+
+                    # 2035년 인구 예측
+                    latest_year = national_df['연도'].max()
+                    latest_pop = national_df[national_df['연도'] == latest_year]['인구'].values[0]
+                    years_into_future = 2035 - latest_year
+                    projected_2035 = int(latest_pop + years_into_future * (avg_birth - avg_death))
+
+                    # 그래프 데이터 확장
+                    years.append(2035)
+                    population.append(projected_2035)
+
+                    # 시각화
+                    import matplotlib.pyplot as plt
+
+                    fig, ax = plt.subplots()
+                    ax.plot(years, population, marker='o', linestyle='-')
+                    ax.set_title("Population Trend and 2035 Projection")
+                    ax.set_xlabel("Year")
+                    ax.set_ylabel("Population")
+
+                    # 예측값 강조
+                    ax.annotate(f"2035: {projected_2035:,}", xy=(2035, projected_2035),
+                                xytext=(2030, projected_2035 + 100000),
+                                arrowprops=dict(arrowstyle="->", color="red"),
+                                fontsize=10, color="red")
+
+                    st.pyplot(fig)
+
 
 
 # ---------------------
