@@ -627,7 +627,64 @@ class EDA:
                     - Some regions (e.g., Sejong) may show high growth rate despite small population.
                     - Regions with negative values are experiencing population decline and may require policy attention.
                     """)
+        # -------------------------
+        # 12. 증감률 상위 지역 및 연도 분석
+        # -------------------------
+        with st.expander("📈 Top Population Changes by Region & Year"):
+            file = st.file_uploader("Upload population_trends.csv", type="csv", key="top_change")
+            if file:
+                df = pd.read_csv(file)
 
+                tabs = st.tabs(["Top Changes Table"])
+
+                with tabs[0]:
+                    st.subheader("📋 Top 100 Yearly Changes (Δ Population)")
+
+                    # 전국 제외
+                    df = df[df['행정구역'] != '전국'].copy()
+                    df['인구'] = pd.to_numeric(df['인구'], errors='coerce')
+                    df = df.dropna(subset=['인구', '연도'])
+
+                    # 연도 정렬
+                    df = df.sort_values(['행정구역', '연도'])
+
+                    # 증감 계산
+                    df['증감'] = df.groupby('행정구역')['인구'].diff()
+
+                    # 상위 100개 증감 정렬
+                    top100 = df.dropna(subset=['증감']).copy()
+                    top100['증감_절댓값'] = top100['증감'].abs()
+                    top100 = top100.sort_values('증감_절댓값', ascending=False).head(100)
+
+                    # 천단위 콤마 포맷 적용
+                    top100_display = top100[['행정구역', '연도', '인구', '증감']].copy()
+                    top100_display['인구'] = top100_display['인구'].apply(lambda x: f"{int(x):,}")
+                    top100_display['증감'] = top100_display['증감'].apply(lambda x: f"{int(x):,}")
+
+                    # 스타일링: 증감값에 컬러바 적용
+                    def color_gradient(val):
+                        try:
+                            v = int(val.replace(",", ""))
+                        except:
+                            return ""
+                        color = f"background-color: rgba({255 if v < 0 else 0}, {0 if v < 0 else 0}, {255 if v > 0 else 0}, 0.2)"
+                        return color
+
+                    styled = top100_display.style.applymap(color_gradient, subset=['증감']) \
+                                                 .set_properties(**{'text-align': 'center'}) \
+                                                 .hide(axis="index")
+
+                    st.dataframe(styled, use_container_width=True)
+
+                    # 해설
+                    st.markdown("""
+                    ### 🔍 Interpretation
+                    - This table shows the **top 100 most significant changes** in population (positive or negative).
+                    - Color-coded highlights:  
+                      - 🔵 Blue: Significant increase  
+                      - 🔴 Red: Significant decrease  
+                    - Useful to identify years and regions with demographic shocks (e.g., urban migration, new development, depopulation).
+                    """)
 
 # ---------------------
 # 페이지 객체 생성
