@@ -1,3 +1,9 @@
 streamlit
 pyrebase4
 setuptools
+time
+io
+pandas
+numpy
+matplotlib.pyplot
+seaborn
