@@ -541,7 +541,92 @@ class EDA:
                                 fontsize=10, color="red")
 
                     st.pyplot(fig)
+        # -------------------------
+        # 11. 지역별 인구 변화량 순위 분석
+        # -------------------------
+        with st.expander("📊 Regional Population Change Analysis"):
+            file = st.file_uploader("Upload population_trends.csv", type="csv", key="regional_change")
+            if file:
+                df = pd.read_csv(file)
 
+                tabs = st.tabs(["Population Change"])
+
+                with tabs[0]:
+                    st.subheader("📉 Regional Population Change (Last 5 Years)")
+
+                    # 전국 제외
+                    region_df = df[df['행정구역'] != '전국'].copy()
+
+                    # 숫자형 변환
+                    for col in ['인구']:
+                        region_df[col] = pd.to_numeric(region_df[col], errors='coerce')
+                    region_df = region_df.dropna(subset=['연도', '인구'])
+
+                    # 최근 5년 추출
+                    latest_year = region_df['연도'].max()
+                    recent_years = sorted(region_df['연도'].unique())[-5:]
+                    filtered = region_df[region_df['연도'].isin(recent_years)]
+
+                    # 지역별 변화량 계산
+                    pivot = filtered.pivot_table(index='행정구역', columns='연도', values='인구')
+                    pivot = pivot.dropna()  # 결측 제거
+
+                    pivot['change'] = pivot[recent_years[-1]] - pivot[recent_years[0]]
+                    pivot['rate'] = ((pivot['change'] / pivot[recent_years[0]]) * 100).round(2)
+
+                    # 영어 지역명 매핑
+                    region_kr_to_en = {
+                        '서울': 'Seoul', '부산': 'Busan', '대구': 'Daegu', '인천': 'Incheon',
+                        '광주': 'Gwangju', '대전': 'Daejeon', '울산': 'Ulsan', '세종': 'Sejong',
+                        '경기': 'Gyeonggi', '강원': 'Gangwon', '충북': 'Chungbuk', '충남': 'Chungnam',
+                        '전북': 'Jeonbuk', '전남': 'Jeonnam', '경북': 'Gyeongbuk', '경남': 'Gyeongnam',
+                        '제주': 'Jeju'
+                    }
+                    pivot['region'] = pivot.index.map(region_kr_to_en)
+
+                    # 단위 변환 (천명)
+                    pivot['change_thousands'] = (pivot['change'] / 1000).round(1)
+
+                    # 변화량 시각화
+                    import seaborn as sns
+                    import matplotlib.pyplot as plt
+
+                    sorted_change = pivot.sort_values('change_thousands', ascending=False)
+
+                    fig1, ax1 = plt.subplots(figsize=(10, 6))
+                    sns.barplot(data=sorted_change, x='change_thousands', y='region', ax=ax1, palette='Blues_r')
+                    ax1.set_title("Population Change by Region (Thousands)")
+                    ax1.set_xlabel("Change (Thousands)")
+                    ax1.set_ylabel("Region")
+
+                    # 막대에 값 표시
+                    for i, v in enumerate(sorted_change['change_thousands']):
+                        ax1.text(v + 5, i, f"{v:.1f}", va='center', fontsize=9)
+
+                    st.pyplot(fig1)
+
+                    # 변화율 시각화
+                    sorted_rate = pivot.sort_values('rate', ascending=False)
+
+                    fig2, ax2 = plt.subplots(figsize=(10, 6))
+                    sns.barplot(data=sorted_rate, x='rate', y='region', ax=ax2, palette='RdYlGn')
+                    ax2.set_title("Population Change Rate by Region (%)")
+                    ax2.set_xlabel("Rate (%)")
+                    ax2.set_ylabel("Region")
+
+                    for i, v in enumerate(sorted_rate['rate']):
+                        ax2.text(v + 0.5, i, f"{v:.2f}%", va='center', fontsize=9)
+
+                    st.pyplot(fig2)
+
+                    # 해설
+                    st.markdown("""
+                    ### 📌 Interpretation
+                    - The **population change chart** shows absolute change (in thousands) over the last 5 years.
+                    - The **rate chart** shows percent increase or decrease over the same period.
+                    - Some regions (e.g., Sejong) may show high growth rate despite small population.
+                    - Regions with negative values are experiencing population decline and may require policy attention.
+                    """)
 
 
 # ---------------------
