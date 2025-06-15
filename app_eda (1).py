@@ -448,6 +448,42 @@ class EDA:
                 > - 오른쪽: 로그 변환 후 분포는 훨씬 균형잡힌 형태로, 중앙값 부근에 데이터가 집중됩니다.  
                 > - 극단치의 영향이 완화되어 이후 분석·모델링 안정성이 높아집니다.
                 """)
+        # -------------------------
+        # 9. 인구 통계 데이터 분석
+        # -------------------------
+        with st.expander("📈 인구 통계 분석 (population_trends.csv)"):
+            pop_file = st.file_uploader("population_trends.csv 파일 업로드", type="csv", key="population")
+            if pop_file:
+                pop_df = pd.read_csv(pop_file)
+
+                # 탭 구조로 분석
+                tabs = st.tabs(["1. 데이터 미리보기", "2. 결측치 처리", "3. 기초 통계", "4. 데이터 구조"])
+
+                with tabs[0]:
+                    st.subheader("1️⃣ 원본 데이터 미리보기")
+                    st.dataframe(pop_df.head())
+
+                with tabs[1]:
+                    st.subheader("2️⃣ '세종' 지역 결측치('-') → 0 처리")
+                    sejong_mask = pop_df['행정구역'].str.contains("세종")
+                    pop_df.loc[sejong_mask] = pop_df.loc[sejong_mask].replace("-", "0")
+                    st.write("✅ '세종' 지역 결측치가 '0'으로 처리되었습니다.")
+                    st.dataframe(pop_df[sejong_mask].head())
+
+                with tabs[2]:
+                    st.subheader("3️⃣ 숫자형 컬럼 변환 및 요약 통계")
+                    numeric_cols = ['인구', '출생아수(명)', '사망자수(명)']
+                    for col in numeric_cols:
+                        pop_df[col] = pd.to_numeric(pop_df[col], errors='coerce')
+                    pop_df[numeric_cols] = pop_df[numeric_cols].fillna(0)
+                    st.dataframe(pop_df[numeric_cols].describe())
+
+                with tabs[3]:
+                    st.subheader("4️⃣ 데이터프레임 구조 (`df.info()`)")
+                    import io
+                    buffer = io.StringIO()
+                    pop_df.info(buf=buffer)
+                    st.text(buffer.getvalue())
 
 
 # ---------------------
