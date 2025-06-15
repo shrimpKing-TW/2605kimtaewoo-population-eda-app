@@ -685,6 +685,58 @@ class EDA:
                       - 🔴 Red: Significant decrease  
                     - Useful to identify years and regions with demographic shocks (e.g., urban migration, new development, depopulation).
                     """)
+        # -------------------------
+        # 13. 지역별 인구 누적 영역 그래프
+        # -------------------------
+        with st.expander("📊 Stacked Area Chart by Region"):
+            file = st.file_uploader("Upload population_trends.csv", type="csv", key="stacked_area")
+            if file:
+                df = pd.read_csv(file)
+
+                tabs = st.tabs(["Stacked Area Chart"])
+
+                with tabs[0]:
+                    st.subheader("📈 Population Stacked Area Chart by Region")
+
+                    # 전처리
+                    df = df[df['행정구역'] != '전국'].copy()
+                    df['인구'] = pd.to_numeric(df['인구'], errors='coerce')
+                    df = df.dropna(subset=['인구', '연도'])
+
+                    # 지역명 영문 변환
+                    region_map = {
+                        '서울': 'Seoul', '부산': 'Busan', '대구': 'Daegu', '인천': 'Incheon',
+                        '광주': 'Gwangju', '대전': 'Daejeon', '울산': 'Ulsan', '세종': 'Sejong',
+                        '경기': 'Gyeonggi', '강원': 'Gangwon', '충북': 'Chungbuk', '충남': 'Chungnam',
+                        '전북': 'Jeonbuk', '전남': 'Jeonnam', '경북': 'Gyeongbuk', '경남': 'Gyeongnam',
+                        '제주': 'Jeju'
+                    }
+                    df['Region_EN'] = df['행정구역'].map(region_map)
+
+                    # 피벗 테이블 생성
+                    pivot_df = df.pivot_table(index='연도', columns='Region_EN', values='인구', aggfunc='sum')
+                    pivot_df = pivot_df.sort_index()
+
+                    # 시각화 (stacked area chart using matplotlib)
+                    import matplotlib.pyplot as plt
+
+                    fig, ax = plt.subplots(figsize=(12, 6))
+                    pivot_df.plot.area(ax=ax, cmap='tab20')
+
+                    ax.set_title("Population Trend by Region (Stacked Area)")
+                    ax.set_xlabel("Year")
+                    ax.set_ylabel("Population")
+                    ax.legend(loc='upper left', bbox_to_anchor=(1.0, 1.0), title="Region")
+
+                    st.pyplot(fig)
+
+                    st.markdown("""
+                    ### 🧭 Interpretation
+                    - This stacked area chart shows the population distribution by region over time.
+                    - Larger colored bands indicate regions with higher population.
+                    - Use this chart to observe growth trends and compare relative size between regions.
+                    """)
+
 
 # ---------------------
 # 페이지 객체 생성
