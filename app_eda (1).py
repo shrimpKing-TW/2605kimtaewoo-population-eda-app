@@ -239,13 +239,13 @@ class EDA:
 
                 with tabs[1]:
                     st.subheader("2️⃣ '세종' 지역 결측치('-') → 0 처리")
-                    if '행정구역' in pop_df.columns:
-                        sejong_mask = pop_df['행정구역'].astype(str).str.contains("세종")
+                    if '지역' in pop_df.columns:
+                        sejong_mask = pop_df['지역'].astype(str).str.contains("세종")
                         pop_df.loc[sejong_mask] = pop_df.loc[sejong_mask].replace("-", "0")
                         st.write("✅ '세종' 지역 결측치가 '0'으로 처리되었습니다.")
                         st.dataframe(pop_df[sejong_mask].head())
                     else:
-                        st.warning("⚠️ '행정구역' 컬럼이 없습니다. CSV 파일의 컬럼명을 확인해주세요.")
+                        st.warning("⚠️ '지역' 컬럼이 없습니다. CSV 파일의 컬럼명을 확인해주세요.")
 
                 with tabs[2]:
                     st.subheader("3️⃣ 숫자형 컬럼 변환 및 요약 통계")
@@ -262,6 +262,7 @@ class EDA:
                     buffer = io.StringIO()
                     pop_df.info(buf=buffer)
                     st.text(buffer.getvalue())
+
         # -------------------------
         # 2. 인구 연도별 추이 시각화
         # -------------------------
