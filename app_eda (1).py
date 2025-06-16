@@ -331,7 +331,7 @@ class EDA:
 
 
         # -------------------------
-        # 3. Regional Population Change Analysis (수정본)
+        # 3. 지역별 인구 변화량 순위 분석
         # -------------------------
         with st.expander("📊 Regional Population Change Analysis"):
             file = st.file_uploader("Upload population_trends.csv", type="csv", key="regional_change")
@@ -420,7 +420,7 @@ class EDA:
                     """)
 
         # -------------------------
-        # 4. 증감률 상위 지역 및 연도 분석
+        # 4. Top Population Changes by Region & Year (수정본)
         # -------------------------
         with st.expander("📈 Top Population Changes by Region & Year"):
             file = st.file_uploader("Upload population_trends.csv", type="csv", key="top_change")
@@ -430,53 +430,66 @@ class EDA:
                 tabs = st.tabs(["Top Changes Table"])
 
                 with tabs[0]:
-                    st.subheader("📋 Top 100 Yearly Changes (Δ Population)")
+                    st.subheader("Top 100 Yearly Changes (Δ Population)")
 
                     # 전국 제외
-                    df = df[df['행정구역'] != '전국'].copy()
+                    df = df[df['지역'] != '전국'].copy()
+
                     df['인구'] = pd.to_numeric(df['인구'], errors='coerce')
                     df = df.dropna(subset=['인구', '연도'])
 
-                    # 연도 정렬
-                    df = df.sort_values(['행정구역', '연도'])
+                    # 연도별 정렬 (지역별 오름차순 연도순)
+                    df = df.sort_values(['지역', '연도'])
 
-                    # 증감 계산
-                    df['증감'] = df.groupby('행정구역')['인구'].diff()
+                    # 증감(diff) 계산
+                    df['증감'] = df.groupby('지역')['인구'].diff()
 
-                    # 상위 100개 증감 정렬
+                    # 증감 절댓값 기준 상위 100개 추출
                     top100 = df.dropna(subset=['증감']).copy()
                     top100['증감_절댓값'] = top100['증감'].abs()
                     top100 = top100.sort_values('증감_절댓값', ascending=False).head(100)
 
-                    # 천단위 콤마 포맷 적용
-                    top100_display = top100[['행정구역', '연도', '인구', '증감']].copy()
+                    # 천 단위 콤마 포맷 적용 (숫자형을 문자열로 변환)
+                    top100_display = top100[['지역', '연도', '인구', '증감']].copy()
                     top100_display['인구'] = top100_display['인구'].apply(lambda x: f"{int(x):,}")
-                    top100_display['증감'] = top100_display['증감'].apply(lambda x: f"{int(x):,}")
+                    top100_display['증감'] = top100_display['증감'].apply(lambda x: int(x))  # 컬러맵 위해 숫자 유지
 
-                    # 스타일링: 증감값에 컬러바 적용
+                    # 증감 컬러맵 스타일링 함수
+                    import numpy as np
+
                     def color_gradient(val):
-                        try:
-                            v = int(val.replace(",", ""))
-                        except:
-                            return ""
-                        color = f"background-color: rgba({255 if v < 0 else 0}, {0 if v < 0 else 0}, {255 if v > 0 else 0}, 0.2)"
-                        return color
+                        if pd.isna(val):
+                            return ''
+                        # val 음수: 빨강 계열, 양수: 파랑 계열, 0은 흰색
+                        if val > 0:
+                            # 파랑 계열: 연한 파랑부터 진한 파랑
+                            blue_intensity = min(255, int(50 + 2 * val / 1000 * 205))  # 조절 가능
+                            return f'background-color: rgba(0, 0, {blue_intensity}, 0.3)'
+                        elif val < 0:
+                            # 빨강 계열: 연한 빨강부터 진한 빨강
+                            red_intensity = min(255, int(50 + 2 * abs(val) / 1000 * 205))
+                            return f'background-color: rgba({red_intensity}, 0, 0, 0.3)'
+                        else:
+                            return ''
 
-                    styled = top100_display.style.applymap(color_gradient, subset=['증감']) \
-                                                 .set_properties(**{'text-align': 'center'}) \
-                                                 .hide(axis="index")
+                    # 스타일 적용
+                    styled = top100_display.style.format({
+                        '증감': "{:,}"
+                    }).applymap(color_gradient, subset=['증감']) \
+                    .set_properties(**{'text-align': 'center'}) \
+                    .hide(axis='index')
 
                     st.dataframe(styled, use_container_width=True)
 
                     # 해설
                     st.markdown("""
                     ### 🔍 Interpretation
-                    - This table shows the **top 100 most significant changes** in population (positive or negative).
-                    - Color-coded highlights:  
-                      - 🔵 Blue: Significant increase  
-                      - 🔴 Red: Significant decrease  
-                    - Useful to identify years and regions with demographic shocks (e.g., urban migration, new development, depopulation).
+                    - This table shows the **top 100 largest yearly population changes** by region (positive and negative).
+                    - Blue background indicates population increase, red background indicates decrease.
+                    - Thousand separators are applied for readability.
+                    - Useful for identifying years and regions with significant demographic shifts.
                     """)
+
         # -------------------------
         # 5. 지역별 인구 누적 영역 그래프
         # -------------------------
