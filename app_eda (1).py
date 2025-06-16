@@ -226,6 +226,9 @@ class EDA:
             pop_file = st.file_uploader("population_trends.csv 파일 업로드", type="csv", key="population")
             if pop_file:
                 pop_df = pd.read_csv(pop_file)
+            
+                # 컬럼명 확인용 출력 (필요 시 주석처리 가능)
+                st.write("컬럼명:", pop_df.columns.tolist())
 
                 # 탭 구조로 분석
                 tabs = st.tabs(["1. 데이터 미리보기", "2. 결측치 처리", "3. 기초 통계", "4. 데이터 구조"])
@@ -236,21 +239,25 @@ class EDA:
 
                 with tabs[1]:
                     st.subheader("2️⃣ '세종' 지역 결측치('-') → 0 처리")
-                    sejong_mask = pop_df['행정구역'].str.contains("세종")
-                    pop_df.loc[sejong_mask] = pop_df.loc[sejong_mask].replace("-", "0")
-                    st.write("✅ '세종' 지역 결측치가 '0'으로 처리되었습니다.")
-                    st.dataframe(pop_df[sejong_mask].head())
+                    if '행정구역' in pop_df.columns:
+                        sejong_mask = pop_df['행정구역'].astype(str).str.contains("세종")
+                        pop_df.loc[sejong_mask] = pop_df.loc[sejong_mask].replace("-", "0")
+                        st.write("✅ '세종' 지역 결측치가 '0'으로 처리되었습니다.")
+                        st.dataframe(pop_df[sejong_mask].head())
+                    else:
+                        st.warning("⚠️ '행정구역' 컬럼이 없습니다. CSV 파일의 컬럼명을 확인해주세요.")
 
                 with tabs[2]:
                     st.subheader("3️⃣ 숫자형 컬럼 변환 및 요약 통계")
                     numeric_cols = ['인구', '출생아수(명)', '사망자수(명)']
                     for col in numeric_cols:
-                        pop_df[col] = pd.to_numeric(pop_df[col], errors='coerce')
+                        if col in pop_df.columns:
+                            pop_df[col] = pd.to_numeric(pop_df[col], errors='coerce')
                     pop_df[numeric_cols] = pop_df[numeric_cols].fillna(0)
                     st.dataframe(pop_df[numeric_cols].describe())
 
                 with tabs[3]:
-                    st.subheader("4️⃣ 데이터프레임 구조 (`df.info()`)")
+                    st.subheader("4️⃣ 데이터프레임 구조 (`df.info()`)") 
                     import io
                     buffer = io.StringIO()
                     pop_df.info(buf=buffer)
