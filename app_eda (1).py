@@ -420,7 +420,7 @@ class EDA:
                     """)
 
         # -------------------------
-        # 4. Top Population Changes by Region & Year (수정본)
+        # 4. 증감률 상위 지역 및 연도 분석
         # -------------------------
         with st.expander("📈 Top Population Changes by Region & Year"):
             file = st.file_uploader("Upload population_trends.csv", type="csv", key="top_change")
@@ -501,10 +501,12 @@ class EDA:
                 tabs = st.tabs(["Stacked Area Chart"])
 
                 with tabs[0]:
-                    st.subheader("📈 Population Stacked Area Chart by Region")
+                    st.subheader("Population Stacked Area Chart by Region")
 
-                    # 전처리
-                    df = df[df['행정구역'] != '전국'].copy()
+                    # 전국 제외
+                    df = df[df['지역'] != '전국'].copy()
+
+                    # 인구 숫자 변환 및 결측 제거
                     df['인구'] = pd.to_numeric(df['인구'], errors='coerce')
                     df = df.dropna(subset=['인구', '연도'])
 
@@ -516,16 +518,17 @@ class EDA:
                         '전북': 'Jeonbuk', '전남': 'Jeonnam', '경북': 'Gyeongbuk', '경남': 'Gyeongnam',
                         '제주': 'Jeju'
                     }
-                    df['Region_EN'] = df['행정구역'].map(region_map)
+                    df['Region_EN'] = df['지역'].map(region_map)
 
-                    # 피벗 테이블 생성
+                    # 피벗 테이블 생성 (연도 x 지역, 인구 합)
                     pivot_df = df.pivot_table(index='연도', columns='Region_EN', values='인구', aggfunc='sum')
                     pivot_df = pivot_df.sort_index()
 
-                    # 시각화 (stacked area chart using matplotlib)
                     import matplotlib.pyplot as plt
 
                     fig, ax = plt.subplots(figsize=(12, 6))
+
+                    # 누적 영역 그래프 (stacked area)
                     pivot_df.plot.area(ax=ax, cmap='tab20')
 
                     ax.set_title("Population Trend by Region (Stacked Area)")
@@ -541,6 +544,7 @@ class EDA:
                     - Larger colored bands indicate regions with higher population.
                     - Use this chart to observe growth trends and compare relative size between regions.
                     """)
+
         # -------------------------
         # 6. 인구 EDA 전체 분석 탭 구조
         # -------------------------
