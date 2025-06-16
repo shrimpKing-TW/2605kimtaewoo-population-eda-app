@@ -273,20 +273,27 @@ class EDA:
                 tabs = st.tabs(["Trend by Year"])
 
                 with tabs[0]:
-                    st.subheader("📈 Yearly Population Trend with 2035 Projection")
+                    st.subheader("Yearly Population Trend with 2035 Projection")
 
-                    if '행정구역' in pop_df.columns:
+                    # 필수 컬럼 체크
+                    required_cols = ['연도', '지역', '인구', '출생아수(명)', '사망자수(명)']
+                    missing_cols = [c for c in required_cols if c not in pop_df.columns]
+                    if missing_cols:
+                        st.warning(f"Missing columns in uploaded file: {missing_cols}")
+                    else:
                         # '전국' 데이터 필터링
-                        national_df = pop_df[pop_df['행정구역'] == '전국'].copy()
+                        national_df = pop_df[pop_df['지역'] == '전국'].copy()
 
                         # 숫자형 변환
-                        for col in ['인구', '출생아수(명)', '사망자수(명)']:
-                            if col in national_df.columns:
-                                national_df[col] = pd.to_numeric(national_df[col], errors='coerce')
+                        for col in ['연도', '인구', '출생아수(명)', '사망자수(명)']:
+                            national_df[col] = pd.to_numeric(national_df[col], errors='coerce')
+
+                        # 결측치 제거
                         national_df = national_df.dropna(subset=['연도', '인구'])
 
                         # 연도 오름차순 정렬
                         national_df = national_df.sort_values('연도')
+
                         years = national_df['연도'].astype(int).tolist()
                         population = national_df['인구'].astype(int).tolist()
 
@@ -297,7 +304,7 @@ class EDA:
 
                         # 2035년 인구 예측
                         latest_year = national_df['연도'].max()
-                        latest_pop = national_df[national_df['연도'] == latest_year]['인구'].values[0]
+                        latest_pop = national_df.loc[national_df['연도'] == latest_year, '인구'].values[0]
                         years_into_future = 2035 - latest_year
                         projected_2035 = int(latest_pop + years_into_future * (avg_birth - avg_death))
 
@@ -308,21 +315,20 @@ class EDA:
                         # 시각화
                         import matplotlib.pyplot as plt
 
-                        fig, ax = plt.subplots()
+                        fig, ax = plt.subplots(figsize=(8, 5))
                         ax.plot(years, population, marker='o', linestyle='-')
                         ax.set_title("Population Trend and 2035 Projection")
                         ax.set_xlabel("Year")
                         ax.set_ylabel("Population")
 
-                        # 예측값 강조
+                        # 2035년 예측값 강조 표시
                         ax.annotate(f"2035: {projected_2035:,}", xy=(2035, projected_2035),
                                     xytext=(2030, projected_2035 + 100000),
                                     arrowprops=dict(arrowstyle="->", color="red"),
                                     fontsize=10, color="red")
 
                         st.pyplot(fig)
-                    else:
-                        st.warning("⚠️ '행정구역' 컬럼이 없습니다. 올바른 population_trends.csv 파일을 업로드해주세요.")
+
 
         # -------------------------
         # 3. 지역별 인구 변화량 순위 분석
